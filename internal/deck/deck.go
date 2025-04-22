@@ -2,6 +2,7 @@ package deck
 
 import (
 	"errors"
+	"log"
 	"math/rand/v2"
 
 	"github.com/julienr1/cribbage/internal/assert"
@@ -9,6 +10,7 @@ import (
 
 var EmptyDeckErr = errors.New("deck is empty")
 var NotEnoughCardsErr = errors.New("deck does not contain enough cards")
+var TargetTooSmallErr = errors.New("output slice is not large enough")
 
 type Deck struct {
 	drawIndex int
@@ -28,6 +30,7 @@ func New() *Deck {
 }
 
 func (d *Deck) Shuffle() {
+	log.Println("Shuffling deck")
 	for i := range len(d.cards) {
 		target := i + rand.IntN(len(d.cards)-i)
 		d.cards[target], d.cards[i] = d.cards[i], d.cards[target]
@@ -47,6 +50,10 @@ func (d *Deck) Draw() (Card, error) {
 func (d *Deck) DrawN(n int, out []Card) (int, error) {
 	if d.drawIndex+n >= len(d.cards) {
 		return 0, NotEnoughCardsErr
+	}
+
+	if len(out) < n {
+		return 0, TargetTooSmallErr
 	}
 
 	for i := range n {

@@ -2,6 +2,7 @@ package game
 
 import (
 	"fmt"
+	"log"
 
 	"github.com/julienr1/cribbage/internal/assert"
 	"github.com/julienr1/cribbage/internal/deck"
@@ -11,18 +12,21 @@ type Game struct {
 	deck  *deck.Deck
 	state GameState
 
-	hands []*Hand
+	hands Hands
 	crib  Crib
 }
 
-func New(players []*Hand) *Game {
+func New(players Hands) *Game {
 	d := deck.New()
 	return &Game{deck: d, hands: players}
 }
 
 func (g *Game) Next() {
+	log.Println("Current game state:", g.state.String())
+
 	switch g.state {
 	case deal:
+		g.deck.Shuffle()
 		g.deal()
 	case crib:
 		g.buildCrib()
@@ -38,10 +42,13 @@ func (g *Game) deal() {
 		handSize = 5
 	}
 
+	log.Printf("Dealing %d cards in a %d player game.\n", handSize, len(g.hands))
+
 	for i := range g.hands {
+		g.hands[i].Cards = make([]deck.Card, handSize)
 		n, err := g.deck.DrawN(handSize, g.hands[i].Cards)
-		assert.Assert(n == handSize, fmt.Sprintf("expected deck to draw %d cards.", handSize))
 		assert.AssertE(err)
+		assert.Assert(n == handSize, fmt.Sprintf("expected deck to draw %d cards.", handSize))
 	}
 
 	// If this is a 3 player game, the crib should get a single card when dealing the hands.
@@ -58,10 +65,17 @@ func (g *Game) deal() {
 }
 
 func (g *Game) buildCrib() {
-	for _, hand := range g.hands {
-		card := hand.SelectCribCard()
-		err := g.crib.AddCard(card)
-		assert.AssertE(err)
+	var count uint8 = 2
+	if len(g.hands) > 2 {
+		count = 1
 	}
+
+	log.Printf("Waiting for players to add cards (%d) to the crib.", count)
+	for _, hand := range g.hands {
+		hand.SendToCrib(count, &g.crib)
+	}
+	log.Println("Crib is now:", g.crib.String())
+
 	g.state = extra
 }
+

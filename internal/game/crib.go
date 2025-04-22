@@ -22,3 +22,7 @@ func (c *Crib) AddCard(card deck.Card) error {
 	c.count++
 	return nil
 }
+
+func (c *Crib) String() string {
+	return Cards(c.Cards[:]).String()
+}

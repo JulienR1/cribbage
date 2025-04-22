@@ -2,6 +2,7 @@ package assert
 
 import (
 	"fmt"
+	"log"
 	"os"
 )
 
@@ -12,9 +13,9 @@ func Assert(condition bool, message any) {
 
 	switch msg := message.(type) {
 	case error:
-		fmt.Fprintln(os.Stderr, msg.Error())
+		log.Println(msg.Error())
 	default:
-		fmt.Fprintln(os.Stderr, msg)
+		log.Println(msg)
 	}
 
 	os.Exit(1)
