@@ -8,6 +8,7 @@ import (
 )
 
 var EmptyDeckErr = errors.New("deck is empty")
+var NotEnoughCardsErr = errors.New("deck does not contain enough cards")
 
 type Deck struct {
 	drawIndex int
@@ -41,4 +42,17 @@ func (d *Deck) Draw() (Card, error) {
 	c := d.cards[d.drawIndex]
 	d.drawIndex++
 	return c, nil
+}
+
+func (d *Deck) DrawN(n int, out []Card) (int, error) {
+	if d.drawIndex+n >= len(d.cards) {
+		return 0, NotEnoughCardsErr
+	}
+
+	for i := range n {
+		c, err := d.Draw()
+		assert.AssertE(err)
+		out[i] = c
+	}
+	return n, nil
 }

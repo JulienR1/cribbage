@@ -31,6 +31,30 @@ func TestEmptyDeck(t *testing.T) {
 	assert.Error(t, err)
 }
 
+func TestDrawN(t *testing.T) {
+	d := deck.New()
+
+	cards := make([]deck.Card, 5)
+	n, err := d.DrawN(5, cards)
+
+	assert.NoError(t, err)
+	assert.Equal(t, 5, n)
+	assert.Len(t, cards, 5)
+	assert.NotEmpty(t, cards)
+}
+
+func TestDrawMore(t *testing.T) {
+	d := deck.New()
+	cards := make([]deck.Card, 52)
+
+	n, err := d.DrawN(26, cards)
+	assert.NoError(t, err)
+	assert.Equal(t, 26, n)
+	n, err = d.DrawN(40, cards)
+	assert.Error(t, err)
+	assert.Equal(t, 0, n)
+}
+
 func TestShuffle(t *testing.T) {
 	decksAreIdentical := true
 
