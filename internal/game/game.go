@@ -3,6 +3,7 @@ package game
 import (
 	"fmt"
 	"log"
+	"sync"
 
 	"github.com/julienr1/cribbage/internal/assert"
 	"github.com/julienr1/cribbage/internal/deck"
@@ -70,12 +71,19 @@ func (g *Game) buildCrib() {
 		count = 1
 	}
 
+	var wg sync.WaitGroup
+	wg.Add(len(g.hands))
+
 	log.Printf("Waiting for players to add cards (%d) to the crib.", count)
 	for _, hand := range g.hands {
-		hand.SendToCrib(count, &g.crib)
+		go func() {
+			hand.SendToCrib(count, &g.crib)
+			wg.Done()
+		}()
 	}
+
+	wg.Wait()
 	log.Println("Crib is now:", g.crib.String())
 
 	g.state = extra
 }
-
