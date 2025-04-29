@@ -17,6 +17,13 @@ const (
 	HEARTS
 )
 
+const (
+	ACE   uint8 = 1
+	JACK        = 11
+	QUEEN       = 12
+	KING        = 13
+)
+
 // color --> 2 bits
 // value: 1-13 --> 4 bits
 // bitmap: cc--vvvv
@@ -47,13 +54,13 @@ func (c Card) String() string {
 	var label strings.Builder
 
 	switch c.Value() {
-	case 1:
+	case ACE:
 		label.WriteString("A")
-	case 11:
+	case JACK:
 		label.WriteString("J")
-	case 12:
+	case QUEEN:
 		label.WriteString("Q")
-	case 13:
+	case KING:
 		label.WriteString("K")
 	default:
 		label.WriteString(fmt.Sprint(c.Value()))

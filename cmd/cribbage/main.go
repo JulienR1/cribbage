@@ -58,5 +58,7 @@ func main() {
 	log.Println("--- CRIB ---")
 	game.Next()
 
+	log.Println("--- EXTRA ---")
+	game.Next()
 	cancel()
 }

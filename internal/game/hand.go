@@ -16,6 +16,7 @@ type Hand struct {
 	player chan []uint8
 
 	handlers map[uint8](func(data []uint8) []uint8)
+	points   uint8
 }
 
 type Hands []*Hand
@@ -61,6 +62,11 @@ func (h *Hand) SendToCrib(count uint8, crib CardStack) {
 		err := crib.AddCard(deck.Card(c))
 		assert.AssertE(err)
 	}
+}
+
+func (h *Hand) Score(points uint8) {
+	assert.Assert(points > 0, "expected to score some points")
+	h.points += points
 }
 
 func (cards Cards) String() string {

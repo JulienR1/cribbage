@@ -15,6 +15,7 @@ type Game struct {
 
 	hands Hands
 	crib  Crib
+	extra deck.Card
 }
 
 func New(players Hands) *Game {
@@ -32,6 +33,7 @@ func (g *Game) Next() {
 	case crib:
 		g.buildCrib()
 	case extra:
+		g.flipExtraCard()
 	case play:
 	case score:
 	}
@@ -86,4 +88,20 @@ func (g *Game) buildCrib() {
 	log.Println("Crib is now:", g.crib.String())
 
 	g.state = extra
+}
+
+func (g *Game) flipExtraCard() {
+	c, err := g.deck.Draw()
+	assert.AssertE(err)
+	g.extra = c
+
+	log.Println("Extra card is", c)
+
+	if g.extra.Value() == deck.JACK {
+		p := g.hands[len(g.hands)-1]
+		p.Score(1)
+		log.Println(*p, "scored a point.")
+	}
+	g.state = play
+}
 }
