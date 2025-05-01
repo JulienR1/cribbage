@@ -8,6 +8,7 @@ import (
 	"strconv"
 
 	"github.com/julienr1/cribbage/internal/assert"
+	"github.com/julienr1/cribbage/internal/deck"
 	"github.com/julienr1/cribbage/internal/game"
 )
 
@@ -21,12 +22,17 @@ func main() {
 		playerCount = count
 	}
 
-	var players game.Hands
+	var players []*game.Player
 	for range playerCount {
-		players = append(players, game.NewHand())
+		players = append(players, game.NewPlayer())
 	}
 
 	for _, p := range players {
+		p.On(game.RECEIVE_HAND, func(_ []uint8) []uint8 {
+			log.Println("RECEIVE_HAND:", p.Hand)
+			return []uint8{}
+		})
+
 		p.On(game.REQUEST_CRIB_CARD, func(data []uint8) []uint8 {
 			assert.Assert(len(data) == 1, "expected REQUEST_CRIB_CARD to specify how many cards to give")
 			count := data[0]
@@ -36,11 +42,23 @@ func main() {
 			// TODO: remove this implementation
 			var response []uint8
 			for i := range count {
-				response = append(response, uint8(p.Cards[i]))
+				response = append(response, uint8(p.Hand[i]))
 			}
-			p.Cards = p.Cards[count:]
+			p.Hand = p.Hand[count:]
 
 			return response
+		})
+
+		p.On(game.FLIP_EXTRA, func(data []uint8) []uint8 {
+			assert.Assert(len(data) == 1, "expected FLIP_EXTRA to receive a deck.Card as uint8")
+			card := deck.Card(data[0])
+			log.Println("FLIP_EXTRA: card is", card.String())
+			return []uint8{}
+		})
+
+		p.On(game.SCORE_CHANGED, func(data []uint8) []uint8 {
+			log.Println("SCORE_CHANGED", data)
+			return []uint8{}
 		})
 	}
 
@@ -53,12 +71,14 @@ func main() {
 
 	log.Println("--- HANDS ---")
 	game.Next()
-	log.Println("\n", players.String())
 
 	log.Println("--- CRIB ---")
 	game.Next()
 
 	log.Println("--- EXTRA ---")
 	game.Next()
+
+	log.Println("--- PLAYING ---")
+
 	cancel()
 }

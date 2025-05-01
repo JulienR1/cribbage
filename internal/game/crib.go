@@ -24,5 +24,5 @@ func (c *Crib) AddCard(card deck.Card) error {
 }
 
 func (c *Crib) String() string {
-	return Cards(c.Cards[:]).String()
+	return Hand(c.Cards[:]).String()
 }

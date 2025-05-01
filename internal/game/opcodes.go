@@ -1,5 +1,8 @@
 package game
 
 const (
-	REQUEST_CRIB_CARD uint8 = iota
+	RECEIVE_HAND uint8 = iota
+	REQUEST_CRIB_CARD
+	FLIP_EXTRA
+	SCORE_CHANGED
 )
