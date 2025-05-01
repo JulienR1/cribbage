@@ -68,17 +68,8 @@ func main() {
 	}
 
 	game := game.New(players)
-
-	log.Println("--- HANDS ---")
-	game.Next()
-
-	log.Println("--- CRIB ---")
-	game.Next()
-
-	log.Println("--- EXTRA ---")
-	game.Next()
-
-	log.Println("--- PLAYING ---")
+	for game.Next() {
+	}
 
 	cancel()
 }

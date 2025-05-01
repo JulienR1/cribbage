@@ -8,6 +8,7 @@ const (
 	extra
 	play
 	score
+	done
 )
 
 func (state GameState) String() string {

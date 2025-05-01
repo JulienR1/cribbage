@@ -2,6 +2,7 @@ package game
 
 import (
 	"context"
+	"time"
 
 	"github.com/julienr1/cribbage/internal/assert"
 	"github.com/julienr1/cribbage/internal/deck"
@@ -44,6 +45,7 @@ func (p *Player) Listen(ctx context.Context) {
 		case <-ctx.Done():
 			return
 		default:
+			time.Sleep(50 * time.Millisecond)
 		}
 	}
 }

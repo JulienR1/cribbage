@@ -22,7 +22,7 @@ func New(players []*Player) *Game {
 	return &Game{players: players}
 }
 
-func (g *Game) Next() {
+func (g *Game) Next() bool {
 	log.Println("Current game state:", g.state.String())
 
 	switch g.state {
@@ -38,6 +38,8 @@ func (g *Game) Next() {
 		g.playNextCard()
 	case score:
 	}
+
+	return g.state != done
 }
 
 func (g *Game) deal() {
@@ -105,7 +107,7 @@ func (g *Game) flipExtraCard() {
 }
 
 func (g *Game) playNextCard() {
-
+	panic("not implemented")
 }
 
 func (g *Game) points(p *Player, points uint8) {
