@@ -19,7 +19,9 @@ type Game struct {
 
 	startingIndex int
 	playingIndex  int
+	lastWhoPlayed *Player
 	count         uint8
+	stack         []deck.Card
 }
 
 func New(players []*Player) *Game {
@@ -33,6 +35,7 @@ func (g *Game) Next() bool {
 	case deal:
 		g.startingIndex = (g.startingIndex + 1) % len(g.players)
 		g.playingIndex = g.startingIndex
+		g.lastWhoPlayed = nil
 
 		g.deck = deck.New()
 		g.deck.Shuffle()
@@ -104,13 +107,8 @@ func (g *Game) flipExtraCard() {
 		player.SeeExtra(g.extra)
 	})
 
-	if g.extra.Value() == deck.JACK {
-		// NOTE: (+n -1 mod n) is congruent to (-1 mod n)
-		lastPlayerIndex := (g.playingIndex + len(g.players) - 1) % len(g.players)
-		p := g.players[lastPlayerIndex]
-		g.points(p, 1)
-		log.Println(p, "scored a point.")
-	}
+	lastPlayerIndex := (g.playingIndex + len(g.players) - 1) % len(g.players)
+	g.points(g.players[lastPlayerIndex], HisHeels(g.extra))
 
 	g.state = play
 }
@@ -131,21 +129,29 @@ func (g *Game) playNextCard() {
 	})
 
 	if played != nil {
+		g.lastWhoPlayed = playing
+		g.stack = append(g.stack, *played)
 		g.count += played.Points()
 		g.sync(func(p *Player) {
 			p.UpdateCount(g.count, *played)
 		})
 	}
 
-	// check for points or combo
-	// give points
+	g.points(playing, Fifteen(g.count))
+	g.points(playing, ThirtyOne(g.count))
+	g.points(playing, LastPlayed(played, playing, g.lastWhoPlayed))
+	g.points(playing, TailgateSeries(g.stack))
+	g.points(playing, TailgateRepetitions(g.stack))
+
 	// send to next player
 	panic("not implemented")
 }
 
 func (g *Game) points(p *Player, points uint8) {
-	p.Score(points)
-	g.notify(SCORE_CHANGED)
+	if points > 0 {
+		p.Score(points)
+		g.notify(SCORE_CHANGED)
+	}
 }
 
 func (g *Game) sync(callback func(p *Player)) {
