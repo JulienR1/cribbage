@@ -55,7 +55,7 @@ func TestLastPlayed(t *testing.T) {
 	}
 }
 
-func TestTailSeries(t *testing.T) {
+func TestTailgateSeries(t *testing.T) {
 	c1, _ := deck.NewCard(deck.ACE, deck.CLUBS)
 	c2, _ := deck.NewCard(2, deck.CLUBS)
 	c3, _ := deck.NewCard(3, deck.HEARTS)

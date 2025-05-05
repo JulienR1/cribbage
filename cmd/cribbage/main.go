@@ -44,7 +44,6 @@ func main() {
 			for i := range count {
 				response = append(response, uint8(p.Hand[i]))
 			}
-			p.Hand = p.Hand[count:]
 
 			return response
 		})
@@ -56,8 +55,13 @@ func main() {
 			return []uint8{}
 		})
 
-		p.On(game.SCORE_CHANGED, func(data []uint8) []uint8 {
-			log.Println("SCORE_CHANGED", data)
+		p.On(game.SCORE_CHANGED, func(_ []uint8) []uint8 {
+			var scores []uint8
+			for _, p2 := range players {
+				scores = append(scores, p2.Points)
+			}
+
+			log.Println("SCORE_CHANGED", scores)
 			return []uint8{}
 		})
 

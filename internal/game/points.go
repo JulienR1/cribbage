@@ -1,6 +1,7 @@
 package game
 
 import (
+	"log"
 	"slices"
 
 	"github.com/julienr1/cribbage/internal/assert"
@@ -9,6 +10,7 @@ import (
 
 func Fifteen(count uint8) (points uint8) {
 	if count == 15 {
+		log.Println("15: +2")
 		return 2
 	}
 	return 0
@@ -16,6 +18,7 @@ func Fifteen(count uint8) (points uint8) {
 
 func ThirtyOne(count uint8) (points uint8) {
 	if count == 31 {
+		log.Println("31: +2")
 		return 2
 	}
 	return 0
@@ -23,6 +26,7 @@ func ThirtyOne(count uint8) (points uint8) {
 
 func LastPlayed(playedCard *deck.Card, playing, lastWhoPlayed *Player) (points uint8) {
 	if playedCard == nil && playing == lastWhoPlayed {
+		log.Println("Go!: +1")
 		return 1
 	}
 	return 0
@@ -38,19 +42,28 @@ func TailgateSeries(cards []deck.Card) (points uint8) {
 		}
 	}
 
+	if bestLength > 0 {
+		log.Printf("Run (%s): +%d\n", cards[len(cards)-bestLength:], bestLength)
+	}
+
 	return uint8(bestLength)
 }
 
 func AnySeries(cards []deck.Card) (points uint8) {
-	slices.SortFunc(cards, func(a, b deck.Card) int {
+	copiedCards := make([]deck.Card, len(cards))
+	for i, c := range cards {
+		copiedCards[i] = c
+	}
+
+	slices.SortFunc(copiedCards, func(a, b deck.Card) int {
 		return int(a.Value()) - int(b.Value())
 	})
 
 	var bestLength = 0
 	var left, right = 0, 1
 
-	for ; right < len(cards); right++ {
-		if cards[right-1].Value()+1 == cards[right].Value() {
+	for ; right < len(copiedCards); right++ {
+		if copiedCards[right-1].Value()+1 == copiedCards[right].Value() {
 			bestLength = right - left + 1
 		} else {
 			left = right
@@ -71,6 +84,11 @@ func TailgateRepetitions(cards []deck.Card) (points uint8) {
 			break
 		}
 	}
+
+	if count > 1 {
+		log.Printf("Repetitions (%d): +%d\n", count, count*(count-1))
+	}
+
 	return uint8(count * (count - 1))
 }
 
@@ -80,8 +98,9 @@ func AnyRepetitions(cards []deck.Card) (points uint8) {
 		counts[c.Value()]++
 	}
 
-	for _, v := range counts {
+	for k, v := range counts {
 		points += uint8(v * (v - 1))
+		log.Printf("Repetitions (%d): +%d\n", k, v*(v-1))
 	}
 	return points
 }
@@ -96,17 +115,20 @@ func Flush(cards []deck.Card, extra deck.Card, isCrib bool) (points uint8) {
 	}
 
 	if extra.Color() == cards[0].Color() {
+		log.Println("Flush (w/ extra): +5")
 		return 5
 	}
 	if isCrib {
 		return 0
 	}
 
+	log.Println("Flush: +4")
 	return 4
 }
 
 func HisHeels(extra deck.Card) (points uint8) {
 	if extra.Value() == deck.JACK {
+		log.Println("His heels! +1")
 		return 1
 	}
 	return 0
@@ -115,6 +137,7 @@ func HisHeels(extra deck.Card) (points uint8) {
 func HisNobs(extra deck.Card, cards []deck.Card) (points uint8) {
 	for _, c := range cards {
 		if c.Value() == deck.JACK && c.Color() == extra.Color() {
+			log.Println("His nobs! +1")
 			return 1
 		}
 	}

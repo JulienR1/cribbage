@@ -47,6 +47,7 @@ func (g *Game) Next() bool {
 	case play:
 		g.playNextCard()
 	case score:
+		g.score()
 	}
 
 	return g.state != done
@@ -135,15 +136,38 @@ func (g *Game) playNextCard() {
 		g.sync(func(p *Player) {
 			p.UpdateCount(g.count, *played)
 		})
+		log.Println("Stack:", g.stack)
 	}
 
 	g.points(playing, Fifteen(g.count))
 	g.points(playing, ThirtyOne(g.count))
-	g.points(playing, LastPlayed(played, playing, g.lastWhoPlayed))
 	g.points(playing, TailgateSeries(g.stack))
 	g.points(playing, TailgateRepetitions(g.stack))
 
-	// send to next player
+	var lastPlayedPoints = LastPlayed(played, playing, g.lastWhoPlayed)
+	g.points(playing, lastPlayedPoints)
+
+	if g.count == 31 || lastPlayedPoints > 0 {
+		g.count = 0
+		g.lastWhoPlayed = nil
+		g.stack = []deck.Card{}
+	}
+
+	for _, p := range g.players {
+		if len(p.Hand) > 0 {
+			return
+		}
+	}
+
+	g.points(playing, LastPlayed(nil, playing, g.lastWhoPlayed))
+	g.state = score
+}
+
+func (g *Game) score() {
+	for _, p := range g.players {
+		p.RestoreHand()
+	}
+
 	panic("not implemented")
 }
 

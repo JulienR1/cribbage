@@ -3,6 +3,7 @@ package game
 import (
 	"context"
 	"fmt"
+	"slices"
 	"time"
 
 	"github.com/julienr1/cribbage/internal/assert"
@@ -16,8 +17,10 @@ type Player struct {
 	ch       chan []uint8
 	handlers map[uint8](func(data []uint8) []uint8)
 
-	Hand   Hand
-	points uint8
+	Hand         Hand
+	originalHand Hand
+
+	Points uint8
 }
 
 func NewPlayer() *Player {
@@ -58,6 +61,10 @@ func (p *Player) SendToCrib(count uint8, crib CardStack) {
 	assert.Assert(len(data) == int(count), "expected response to REQUEST_CRIB_CARD to be []deck.Card converted to []uint8")
 
 	for _, c := range data {
+		index := slices.Index(p.Hand, deck.Card(c))
+		assert.Assert(index >= 0, "expected card to be found in hand")
+		p.Hand = slices.Delete(p.Hand, index, index+1)
+
 		err := crib.AddCard(deck.Card(c))
 		assert.AssertE(err)
 	}
@@ -79,7 +86,15 @@ func (p *Player) PlayCard(count uint8) *deck.Card {
 	assert.Assert(len(data) == 1, "expected REQUEST_PLAY_CARD to be answered with a deck.Card")
 	played := deck.Card(data[0])
 
+	index := slices.Index(p.Hand, played)
+	assert.Assert(index >= 0, "expected played card to be in hand")
+	p.Hand = slices.Delete(p.Hand, index, index+1)
+
 	return &played
+}
+
+func (p *Player) RestoreHand() {
+	p.Hand = p.originalHand
 }
 
 func (p *Player) WatchPlayedCard() {
@@ -92,7 +107,7 @@ func (p *Player) UpdateCount(count uint8, played deck.Card) {
 
 func (p *Player) Score(points uint8) {
 	assert.Assert(points > 0, "expected to score some points")
-	p.points += points
+	p.Points += points
 }
 
 func (p *Player) shout(payload []uint8, label string) {
