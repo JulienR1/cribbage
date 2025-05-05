@@ -2,6 +2,7 @@ package game
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	"github.com/julienr1/cribbage/internal/assert"
@@ -63,12 +64,43 @@ func (p *Player) SendToCrib(count uint8, crib CardStack) {
 }
 
 func (p *Player) SeeExtra(extra deck.Card) {
-	p.ch <- []uint8{FLIP_EXTRA, uint8(extra)}
+	p.shout([]uint8{FLIP_EXTRA, uint8(extra)}, "FLIP_EXTRA")
+}
+
+func (p *Player) PlayCard(count uint8) *deck.Card {
+	p.ch <- []uint8{REQUEST_PLAY_CARD, count}
 	data := <-p.ch
-	assert.Assert(len(data) == 0, "expected response to FLIP_EXTRA to be of length 0")
+
+	playable := p.Hand.Playable(count)
+	if len(playable) == 0 {
+		return nil
+	}
+
+	assert.Assert(len(data) == 1, "expected REQUEST_PLAY_CARD to be answered with a deck.Card")
+	played := deck.Card(data[0])
+
+	return &played
+}
+
+func (p *Player) WatchPlayedCard() {
+	p.shout([]uint8{WAIT_FOR_PLAY_CARD}, "WAIT_FOR_PLAY_CARD ")
+}
+
+func (p *Player) UpdateCount(count uint8, played deck.Card) {
+	p.shout([]uint8{UPDATE_COUNT, count, uint8(played)}, "UPDATE_COUNT")
 }
 
 func (p *Player) Score(points uint8) {
 	assert.Assert(points > 0, "expected to score some points")
 	p.points += points
+}
+
+func (p *Player) shout(payload []uint8, label string) {
+	p.ch <- payload
+	data := <-p.ch
+	assert.Assertf(len(data) == 0, "expected response to %s to be of length 0", label)
+}
+
+func (p *Player) String() string {
+	return fmt.Sprintf("Player %d", p.id)
 }

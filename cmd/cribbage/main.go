@@ -60,6 +60,34 @@ func main() {
 			log.Println("SCORE_CHANGED", data)
 			return []uint8{}
 		})
+
+		p.On(game.REQUEST_PLAY_CARD, func(data []uint8) []uint8 {
+			assert.Assert(len(data) == 1, "expected REQUEST_PLAY_CARD to pass along the current count")
+
+			count := data[0]
+			playable := p.Hand.Playable(count)
+
+			log.Println("Count is", count, ", playable cards are:", playable)
+
+			// TODO: some correct implementation
+			if len(playable) > 0 {
+				return []uint8{uint8(playable[0])}
+			}
+			return []uint8{}
+		})
+
+		p.On(game.WAIT_FOR_PLAY_CARD, func(data []uint8) []uint8 {
+			log.Println(p, "is waiting")
+			return []uint8{}
+		})
+
+		p.On(game.UPDATE_COUNT, func(data []uint8) []uint8 {
+			assert.Assert(len(data) == 2, "expected UPDATE_COUNT to receive [count, deck.Card]")
+			count := data[0]
+			card := deck.Card(data[1])
+			log.Println(card, "was played, count is now", count)
+			return []uint8{}
+		})
 	}
 
 	ctx, cancel := context.WithCancel(context.Background())
@@ -70,6 +98,5 @@ func main() {
 	game := game.New(players)
 	for game.Next() {
 	}
-
 	cancel()
 }

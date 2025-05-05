@@ -50,6 +50,10 @@ func (c Card) Value() uint8 {
 	return uint8(c & 0b1111)
 }
 
+func (c Card) Points() uint8 {
+	return min(c.Value(), 10)
+}
+
 func (c Card) String() string {
 	var label strings.Builder
 

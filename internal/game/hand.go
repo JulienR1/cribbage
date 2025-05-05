@@ -13,6 +13,15 @@ type CardStack interface {
 	AddCard(card deck.Card) error
 }
 
+func (cards Hand) Playable(count uint8) (playable []deck.Card) {
+	for _, c := range cards {
+		if c.Points()+count <= 31 {
+			playable = append(playable, c)
+		}
+	}
+	return playable
+}
+
 func (cards Hand) String() string {
 	var cardStrs []string
 	for _, c := range cards {

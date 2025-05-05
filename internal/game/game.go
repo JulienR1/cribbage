@@ -16,6 +16,10 @@ type Game struct {
 	players []*Player
 	crib    Crib
 	extra   deck.Card
+
+	startingIndex int
+	playingIndex  int
+	count         uint8
 }
 
 func New(players []*Player) *Game {
@@ -27,6 +31,9 @@ func (g *Game) Next() bool {
 
 	switch g.state {
 	case deal:
+		g.startingIndex = (g.startingIndex + 1) % len(g.players)
+		g.playingIndex = g.startingIndex
+
 		g.deck = deck.New()
 		g.deck.Shuffle()
 		g.deal()
@@ -98,15 +105,41 @@ func (g *Game) flipExtraCard() {
 	})
 
 	if g.extra.Value() == deck.JACK {
-		p := g.players[len(g.players)-1]
+		// NOTE: (+n -1 mod n) is congruent to (-1 mod n)
+		lastPlayerIndex := (g.playingIndex + len(g.players) - 1) % len(g.players)
+		p := g.players[lastPlayerIndex]
 		g.points(p, 1)
-		log.Println(*p, "scored a point.")
+		log.Println(p, "scored a point.")
 	}
 
 	g.state = play
 }
 
 func (g *Game) playNextCard() {
+	g.playingIndex = (g.playingIndex + 1) % len(g.players)
+	playing := g.players[g.playingIndex]
+
+	log.Println(playing, "is playing")
+
+	var played *deck.Card
+	g.sync(func(p *Player) {
+		if p == playing {
+			played = p.PlayCard(g.count)
+		} else {
+			p.WatchPlayedCard()
+		}
+	})
+
+	if played != nil {
+		g.count += played.Points()
+		g.sync(func(p *Player) {
+			p.UpdateCount(g.count, *played)
+		})
+	}
+
+	// check for points or combo
+	// give points
+	// send to next player
 	panic("not implemented")
 }
 
