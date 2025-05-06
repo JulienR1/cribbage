@@ -3,6 +3,7 @@ package game
 import (
 	"fmt"
 	"log"
+	"slices"
 	"sync"
 
 	"github.com/julienr1/cribbage/internal/assert"
@@ -94,6 +95,10 @@ func (g *Game) buildCrib() {
 	})
 	log.Println("Crib is now:", g.crib.String())
 
+	for _, p := range g.players {
+		p.OriginalHand = slices.Clone(p.Hand)
+	}
+
 	g.state = extra
 }
 
@@ -166,27 +171,32 @@ func (g *Game) playNextCard() {
 
 func (g *Game) score() {
 	for _, p := range g.players {
-		p.RestoreHand()
+		p.Hand = p.OriginalHand
 	}
 
 	for i := range len(g.players) {
 		playerIndex := (g.startingIndex + 1 + i) % len(g.players)
 		p := g.players[playerIndex]
-
 		hand := append(p.Hand, g.extra)
+
+		log.Println("Scoring", p, "w/ hand", hand)
+
 		g.points(p, Fifteen(hand))
 		g.points(p, AnyRepetitions(hand))
-		g.points(p, AnySeries(hand))
+		g.points(p, AnySeriesLog(hand))
 
 		g.points(p, Flush(p.Hand, g.extra, false))
 		g.points(p, HisNobs(g.extra, p.Hand))
 	}
 
-	dealer := g.players[g.playingIndex]
+	dealer := g.players[g.startingIndex]
 	crib := append(g.crib.Cards[:], g.extra)
+
+	log.Println("Scoring crib w/ hand", crib)
+
 	g.points(dealer, Fifteen(crib))
 	g.points(dealer, AnyRepetitions(crib))
-	g.points(dealer, AnySeries(crib))
+	g.points(dealer, AnySeriesLog(crib))
 
 	g.points(dealer, Flush(g.crib.Cards[:], g.extra, true))
 

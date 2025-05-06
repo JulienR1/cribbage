@@ -18,7 +18,7 @@ type Player struct {
 	handlers map[uint8](func(data []uint8) []uint8)
 
 	Hand         Hand
-	originalHand Hand
+	OriginalHand Hand
 
 	Points uint8
 }
@@ -91,10 +91,6 @@ func (p *Player) PlayCard(count uint8) *deck.Card {
 	p.Hand = slices.Delete(p.Hand, index, index+1)
 
 	return &played
-}
-
-func (p *Player) RestoreHand() {
-	p.Hand = p.originalHand
 }
 
 func (p *Player) WatchPlayedCard() {

@@ -38,6 +38,10 @@ func Fifteen(cards []deck.Card) (points uint8) {
 		}
 	}
 
+	if points > 0 {
+		log.Printf("15 (%dx): +%d\n", points/2, points)
+	}
+
 	return points
 }
 
@@ -94,6 +98,14 @@ func AnySeries(cards []deck.Card) (points uint8) {
 	return uint8(bestLength)
 }
 
+func AnySeriesLog(cards []deck.Card) (points uint8) {
+	points = AnySeries(cards)
+	if points > 0 {
+		log.Printf("Series: +%d\n", points)
+	}
+	return points
+}
+
 func TailgateRepetitions(cards []deck.Card) (points uint8) {
 	var count = 1
 	for ; count < len(cards); count++ {
@@ -116,8 +128,10 @@ func AnyRepetitions(cards []deck.Card) (points uint8) {
 	}
 
 	for k, v := range counts {
-		points += uint8(v * (v - 1))
-		log.Printf("Repetitions (%d): +%d\n", k, v*(v-1))
+		if v > 1 {
+			points += uint8(v * (v - 1))
+			log.Printf("Repetitions (%d %ds): +%d\n", v, k, v*(v-1))
+		}
 	}
 	return points
 }
