@@ -8,20 +8,37 @@ import (
 	"github.com/julienr1/cribbage/internal/deck"
 )
 
-func Fifteen(count uint8) (points uint8) {
-	if count == 15 {
-		log.Println("15: +2")
+func CountIs(target, count uint8) uint8 {
+	if count == target {
+		log.Printf("%d: +2\n", count)
 		return 2
 	}
 	return 0
 }
 
-func ThirtyOne(count uint8) (points uint8) {
-	if count == 31 {
-		log.Println("31: +2")
-		return 2
+func Fifteen(cards []deck.Card) (points uint8) {
+	assert.Assert(len(cards) < 8, "too many cards in hand to calculate combinaisons")
+
+	for combinaison := range uint(1 << len(cards)) {
+		var sum, idx = uint8(0), uint(0)
+
+		for (1<<idx) <= combinaison && idx < uint(len(cards)) {
+			if combinaison&(1<<idx) > 0 {
+				sum += cards[idx].Points()
+			}
+			if sum > 15 {
+				break
+			}
+
+			idx++
+		}
+
+		if sum == 15 {
+			points += 2
+		}
 	}
-	return 0
+
+	return points
 }
 
 func LastPlayed(playedCard *deck.Card, playing, lastWhoPlayed *Player) (points uint8) {

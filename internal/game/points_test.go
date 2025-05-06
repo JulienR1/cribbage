@@ -13,24 +13,42 @@ type ComboTest struct {
 	points uint8
 }
 
-func TestFifteen(t *testing.T) {
+func TestCountIs(t *testing.T) {
 	var sum uint8 = 0
 	for i := range uint8(32) {
-		sum += game.Fifteen(i)
+		sum += game.CountIs(15, i)
+		sum += game.CountIs(31, i)
 	}
 
-	assert.Equal(t, uint8(2), sum)
-	assert.Equal(t, uint8(2), game.Fifteen(15))
+	assert.Equal(t, uint8(4), sum)
+	assert.Equal(t, uint8(2), game.CountIs(15, 15))
+	assert.Equal(t, uint8(2), game.CountIs(31, 31))
 }
 
-func TestThirtyOne(t *testing.T) {
-	var sum uint8 = 0
-	for i := range uint8(32) {
-		sum += game.ThirtyOne(i)
+func c(value uint8) deck.Card {
+	card, _ := deck.NewCard(value, deck.CLUBS)
+	return card
+}
+
+func TestFifteen(t *testing.T) {
+	tests := []ComboTest{
+		{cards: []deck.Card{}, points: 0},
+		{cards: []deck.Card{c(deck.ACE), c(2), c(3), c(4)}, points: 0},
+		{cards: []deck.Card{c(deck.ACE), c(2), c(10), c(5)}, points: 2},
+		{cards: []deck.Card{c(deck.ACE), c(deck.JACK), c(10), c(5)}, points: 4},
+		{cards: []deck.Card{c(deck.ACE), c(4), c(10), c(5)}, points: 4},
+		{cards: []deck.Card{c(10), c(deck.JACK), c(deck.QUEEN), c(deck.KING), c(5)}, points: 8},
+		{cards: []deck.Card{c(deck.ACE), c(4), c(10), c(deck.JACK)}, points: 4},
+		{cards: []deck.Card{c(8), c(7), c(3), c(4)}, points: 4},
+		{cards: []deck.Card{c(8), c(7), c(3), c(4), c(8)}, points: 8},
+		{cards: []deck.Card{c(8), c(7), c(3), c(4), c(4)}, points: 8},
+		{cards: []deck.Card{c(8), c(7), c(3), c(3), c(4)}, points: 6},
 	}
 
-	assert.Equal(t, uint8(2), sum)
-	assert.Equal(t, uint8(2), game.ThirtyOne(31))
+	for i, test := range tests {
+		points := game.Fifteen(test.cards)
+		assert.Equalf(t, test.points, points, "tests[%d]", i)
+	}
 }
 
 func TestLastPlayed(t *testing.T) {

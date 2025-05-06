@@ -139,8 +139,8 @@ func (g *Game) playNextCard() {
 		log.Println("Stack:", g.stack)
 	}
 
-	g.points(playing, Fifteen(g.count))
-	g.points(playing, ThirtyOne(g.count))
+	g.points(playing, CountIs(15, g.count))
+	g.points(playing, CountIs(31, g.count))
 	g.points(playing, TailgateSeries(g.stack))
 	g.points(playing, TailgateRepetitions(g.stack))
 
@@ -153,6 +153,7 @@ func (g *Game) playNextCard() {
 		g.stack = []deck.Card{}
 	}
 
+	// NOTE: bail early if some players still have cards to play
 	for _, p := range g.players {
 		if len(p.Hand) > 0 {
 			return
@@ -168,7 +169,28 @@ func (g *Game) score() {
 		p.RestoreHand()
 	}
 
-	panic("not implemented")
+	for i := range len(g.players) {
+		playerIndex := (g.startingIndex + 1 + i) % len(g.players)
+		p := g.players[playerIndex]
+
+		hand := append(p.Hand, g.extra)
+		g.points(p, Fifteen(hand))
+		g.points(p, AnyRepetitions(hand))
+		g.points(p, AnySeries(hand))
+
+		g.points(p, Flush(p.Hand, g.extra, false))
+		g.points(p, HisNobs(g.extra, p.Hand))
+	}
+
+	dealer := g.players[g.playingIndex]
+	crib := append(g.crib.Cards[:], g.extra)
+	g.points(dealer, Fifteen(crib))
+	g.points(dealer, AnyRepetitions(crib))
+	g.points(dealer, AnySeries(crib))
+
+	g.points(dealer, Flush(g.crib.Cards[:], g.extra, true))
+
+	g.state = done
 }
 
 func (g *Game) points(p *Player, points uint8) {
