@@ -8,6 +8,7 @@ const (
 	extra
 	play
 	score
+	roundEnd
 	done
 )
 
@@ -23,6 +24,8 @@ func (state GameState) String() string {
 		return "play"
 	case score:
 		return "score"
+	case roundEnd:
+		return "round end"
 	default:
 		return "unknown"
 	}

@@ -18,6 +18,8 @@ type Game struct {
 	crib    Crib
 	extra   deck.Card
 
+	pointsGoal uint8
+
 	startingIndex int
 	playingIndex  int
 	lastWhoPlayed *Player
@@ -26,7 +28,12 @@ type Game struct {
 }
 
 func New(players []*Player) *Game {
-	return &Game{players: players}
+	var goal uint8 = 121
+	if len(players) == 3 {
+		goal = 61
+	}
+
+	return &Game{players: players, pointsGoal: goal}
 }
 
 func (g *Game) Next() bool {
@@ -37,6 +44,11 @@ func (g *Game) Next() bool {
 		g.startingIndex = (g.startingIndex + 1) % len(g.players)
 		g.playingIndex = g.startingIndex
 		g.lastWhoPlayed = nil
+
+		g.count = 0
+		g.extra = 0
+		g.crib = Crib{}
+		g.stack = []deck.Card{}
 
 		g.deck = deck.New()
 		g.deck.Shuffle()
@@ -49,6 +61,8 @@ func (g *Game) Next() bool {
 		g.playNextCard()
 	case score:
 		g.score()
+	case roundEnd:
+		g.endRound()
 	}
 
 	return g.state != done
@@ -117,6 +131,9 @@ func (g *Game) flipExtraCard() {
 	g.points(g.players[lastPlayerIndex], HisHeels(g.extra))
 
 	g.state = play
+	if g.players[lastPlayerIndex].Points >= g.pointsGoal {
+		g.state = roundEnd
+	}
 }
 
 func (g *Game) playNextCard() {
@@ -158,6 +175,11 @@ func (g *Game) playNextCard() {
 		g.stack = []deck.Card{}
 	}
 
+	if playing.Points >= g.pointsGoal {
+		g.state = roundEnd
+		return
+	}
+
 	// NOTE: bail early if some players still have cards to play
 	for _, p := range g.players {
 		if len(p.Hand) > 0 {
@@ -166,7 +188,11 @@ func (g *Game) playNextCard() {
 	}
 
 	g.points(playing, LastPlayed(nil, playing, g.lastWhoPlayed))
+
 	g.state = score
+	if playing.Points >= g.pointsGoal {
+		g.state = roundEnd
+	}
 }
 
 func (g *Game) score() {
@@ -187,6 +213,11 @@ func (g *Game) score() {
 
 		g.points(p, Flush(p.Hand, g.extra, false))
 		g.points(p, HisNobs(g.extra, p.Hand))
+
+		if p.Points >= g.pointsGoal {
+			g.state = roundEnd
+			return
+		}
 	}
 
 	dealer := g.players[g.startingIndex]
@@ -200,7 +231,19 @@ func (g *Game) score() {
 
 	g.points(dealer, Flush(g.crib.Cards[:], g.extra, true))
 
-	g.state = done
+	g.state = roundEnd
+}
+
+func (g *Game) endRound() {
+	for _, p := range g.players {
+		if p.Points >= g.pointsGoal {
+			log.Println(p, "has won the game!")
+			g.state = done
+			return
+		}
+	}
+
+	g.state = deal
 }
 
 func (g *Game) points(p *Player, points uint8) {
