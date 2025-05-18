@@ -1,11 +1,13 @@
 package web
 
 import (
+	"context"
 	"fmt"
 	"log"
 	"net/http"
 
 	"github.com/julienr1/cribbage/internal/game"
+	"github.com/julienr1/cribbage/internal/web/templates"
 )
 
 func Run() {
@@ -26,9 +28,7 @@ func Run() {
 	http.HandleFunc("GET /{gameId}", func(w http.ResponseWriter, r *http.Request) {
 		gameId := r.PathValue("gameId")
 
-		// TODO: check if game actually exists
-
-		if len(gameId) == 0 {
+		if _, ok := games[gameId]; ok == false {
 			http.Redirect(w, r, "/", http.StatusFound)
 			return
 		}
@@ -37,7 +37,7 @@ func Run() {
 	})
 
 	http.HandleFunc("GET /", func(w http.ResponseWriter, r *http.Request) {
-		fmt.Fprint(w, "todo: some page")
+		templates.Index().Render(context.Background(), w)
 	})
 
 	log.Println("Listening on http://localhost:8888")
