@@ -10,10 +10,17 @@ import (
 	"github.com/julienr1/cribbage/internal/assert"
 	"github.com/julienr1/cribbage/internal/deck"
 	"github.com/julienr1/cribbage/internal/game"
+	"github.com/julienr1/cribbage/internal/web"
 )
 
 func main() {
 	fmt.Println("cribbage")
+
+	if len(os.Args) > 1 && os.Args[1] == "web" {
+		fmt.Println("web mode")
+		web.Run()
+		return
+	}
 
 	var playerCount int = 2
 	if len(os.Args) > 1 {
