@@ -5,6 +5,10 @@ import (
 	"math/rand"
 )
 
+type Container[K any] interface {
+	Contains(key K) bool
+}
+
 var TooManyIdCollisions = errors.New("too many ids collided when trying to generate a new one")
 
 const characters string = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
@@ -17,10 +21,10 @@ func Id(length int) string {
 	return string(id)
 }
 
-func UniqueId[T any](length int, used map[string]T) (string, error) {
+func UniqueId(length int, used Container[string]) (string, error) {
 	for range 50 {
 		var id = Id(length)
-		if _, ok := used[id]; ok == false {
+		if !used.Contains(id) {
 			return id, nil
 		}
 	}

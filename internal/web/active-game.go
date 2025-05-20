@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"log"
 	"slices"
+	"sync/atomic"
+	"time"
 
 	"github.com/gorilla/websocket"
 	"github.com/julienr1/cribbage/internal/game"
@@ -14,28 +16,29 @@ var IncompleteHandshakeErr = errors.New("could not complete game handshake")
 var UnknownGameErr = errors.New("could not find game with specified id")
 
 type ActiveGame struct {
-	id          string
-	game        *game.Game
-	ch          <-chan string
-	connections []*websocket.Conn
+	id   string
+	game *game.Game
+
+	ch            <-chan string
+	connections   []*websocket.Conn
+	cancelationId atomic.Int32
 }
 
-type GameRegistry map[string]*ActiveGame
-
-func (registry GameRegistry) RegisterConnection(conn *websocket.Conn) (*ActiveGame, error) {
+func (registry *GameRegistry) RegisterConnection(conn *websocket.Conn) (*ActiveGame, error) {
 	messageType, message, err := conn.ReadMessage()
 	if messageType != websocket.TextMessage || err != nil {
 		return nil, IncompleteHandshakeErr
 	}
 
 	gameId := string(message)
-	game, ok := registry[gameId]
+	game, ok := registry.Get(gameId)
 	if ok == false {
 		return nil, UnknownGameErr
 	}
 
 	log.Println("received connection for game with id", gameId)
 	game.connections = append(game.connections, conn)
+	game.cancelationId.Add(1)
 
 	return game, nil
 }
@@ -46,9 +49,19 @@ func (registry *GameRegistry) UnregisterConnection(g *ActiveGame, conn *websocke
 	}
 
 	if len(g.connections) == 0 {
-		// TODO: maybe add a cooldown on game deletions
-		log.Println("No more connections on game", g.id)
-		delete(*registry, g.id)
+		go func() {
+			cancelationId := g.cancelationId.Load()
+			log.Println("No more connections on game", g.id, ", scheduled to be deleted in 1 minute.")
+
+			time.Sleep(time.Minute)
+
+			if g.cancelationId.Load() == cancelationId {
+				registry.Delete(g.id)
+				log.Println("Game", g.id, "was deleted.")
+			} else {
+				log.Println("Game", g.id, "was not deleted as a new connection was detected meanwhile.")
+			}
+		}()
 	}
 }
 

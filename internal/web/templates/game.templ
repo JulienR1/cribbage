@@ -1,8 +1,8 @@
 package templates
 
-templ Game() {
+templ Game(gameId string) {
 	<script src="/public/game.js" defer></script>
 	@Layout() {
-		<div>game</div>
+		<div>game { gameId }</div>
 	}
 }

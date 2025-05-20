@@ -11,8 +11,8 @@ import (
 )
 
 func Run() {
-	games := make(GameRegistry)
-	games["8uGAs"] = &ActiveGame{id: "8uGAs"}
+	games := NewGameRegistry()
+	games.Set("8uGAs", &ActiveGame{id: "8uGAs"})
 
 	var upgrader = websocket.Upgrader{}
 
@@ -45,18 +45,18 @@ func Run() {
 			return
 		}
 
-		games[id] = &ActiveGame{id: id}
+		games.Set(id, &ActiveGame{id: id})
 		http.Redirect(w, r, fmt.Sprintf("/%s", id), http.StatusFound)
 	})
 
 	http.HandleFunc("GET /{gameId}", func(w http.ResponseWriter, r *http.Request) {
 		gameId := r.PathValue("gameId")
-		if _, ok := games[gameId]; ok == false || len(gameId) == 0 {
+		if len(gameId) == 0 || games.Contains(gameId) == false {
 			http.Redirect(w, r, "/", http.StatusFound)
 			return
 		}
 
-		templates.Game().Render(context.Background(), w)
+		templates.Game(gameId).Render(context.Background(), w)
 	})
 
 	http.HandleFunc("GET /", func(w http.ResponseWriter, r *http.Request) {
