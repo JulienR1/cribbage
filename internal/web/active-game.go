@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/gorilla/websocket"
+	"github.com/julienr1/cribbage/internal/assert"
 	"github.com/julienr1/cribbage/internal/game"
 )
 
@@ -36,32 +37,44 @@ func (registry *GameRegistry) RegisterConnection(conn *websocket.Conn) (*ActiveG
 		return nil, UnknownGameErr
 	}
 
-	log.Println("received connection for game with id", gameId)
-	game.connections = append(game.connections, conn)
 	game.cancelationId.Add(1)
+	game.connections = append(game.connections, conn)
+	log.Println("received connection for game with id", gameId)
+
+	game.OnPlayerCountChange()
 
 	return game, nil
 }
 
-func (registry *GameRegistry) UnregisterConnection(g *ActiveGame, conn *websocket.Conn) {
-	if i := slices.Index(g.connections, conn); i != -1 {
-		g.connections = slices.Delete(g.connections, i, i+1)
+func (registry *GameRegistry) UnregisterConnection(game *ActiveGame, conn *websocket.Conn) {
+	if i := slices.Index(game.connections, conn); i != -1 {
+		game.connections = slices.Delete(game.connections, i, i+1)
+		game.OnPlayerCountChange()
 	}
 
-	if len(g.connections) == 0 {
+	if len(game.connections) == 0 {
 		go func() {
-			cancelationId := g.cancelationId.Load()
-			log.Println("No more connections on game", g.id, ", scheduled to be deleted in 1 minute.")
+			cancelationId := game.cancelationId.Load()
+			log.Println("No more connections on game", game.id, ", scheduled to be deleted in 1 minute.")
 
 			time.Sleep(time.Minute)
 
-			if g.cancelationId.Load() == cancelationId {
-				registry.Delete(g.id)
-				log.Println("Game", g.id, "was deleted.")
+			if game.cancelationId.Load() == cancelationId {
+				registry.Delete(game.id)
+				log.Println("Game", game.id, "was deleted.")
 			} else {
-				log.Println("Game", g.id, "was not deleted as a new connection was detected meanwhile.")
+				log.Println("Game", game.id, "was not deleted as a new connection was detected meanwhile.")
 			}
 		}()
+	}
+}
+
+func (game *ActiveGame) OnPlayerCountChange() {
+	for _, player := range game.connections {
+		w, err := player.NextWriter(websocket.TextMessage)
+		assert.AssertE(err)
+		defer w.Close()
+		fmt.Fprintf(w, "player-count:%d", len(game.connections))
 	}
 }
 
