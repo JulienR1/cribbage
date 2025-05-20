@@ -3,8 +3,15 @@ package templates
 templ Index() {
 	@Layout() {
 		<div>
-			<div>index page</div>
-			<button hx-get="/clicked" hx-swap="outerHTML">click me</button>
+			<h1>Cribbage!</h1>
+			<form method="post" action="/">
+				<button type="submit">Create a game</button>
+			</form>
+			<form method="get" action="/">
+				<label>Join a game</label>
+				<input name="game-id" placeholder="Enter game code"/>
+				<button type="submit">Join</button>
+			</form>
 		</div>
 	}
 }
