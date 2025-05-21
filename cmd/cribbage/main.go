@@ -29,9 +29,10 @@ func main() {
 		playerCount = count
 	}
 
-	var players []*game.Player
+	var players game.Players
 	for range playerCount {
-		players = append(players, game.NewPlayer())
+		player := game.NewPlayer(players)
+		players = append(players, player)
 	}
 
 	for _, p := range players {

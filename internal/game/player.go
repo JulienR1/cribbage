@@ -8,12 +8,13 @@ import (
 
 	"github.com/julienr1/cribbage/internal/assert"
 	"github.com/julienr1/cribbage/internal/deck"
+	"github.com/julienr1/cribbage/internal/utils"
 )
 
-var nextId int = 0
-
 type Player struct {
-	id       int
+	Id   string
+	Name string
+
 	ch       chan []uint8
 	handlers map[uint8](func(data []uint8) []uint8)
 
@@ -23,13 +24,24 @@ type Player struct {
 	Points uint8
 }
 
-func NewPlayer() *Player {
-	id := nextId
-	nextId++
+type Players []*Player
+
+func (players Players) Contains(id string) bool {
+	for _, p := range players {
+		if p.Id == id {
+			return true
+		}
+	}
+	return false
+}
+
+func NewPlayer(usedIds utils.Container[string]) *Player {
+	id, err := utils.UniqueId(8, usedIds)
+	assert.AssertE(err)
 
 	ch := make(chan []uint8)
 	handlers := make(map[uint8](func(data []uint8) []uint8))
-	return &Player{id: id, ch: ch, handlers: handlers}
+	return &Player{Id: id, ch: ch, handlers: handlers}
 }
 
 func (p *Player) On(opcode uint8, callback func(data []uint8) []uint8) {
@@ -113,5 +125,5 @@ func (p *Player) shout(payload []uint8, label string) {
 }
 
 func (p *Player) String() string {
-	return fmt.Sprintf("Player %d", p.id)
+	return fmt.Sprintf("Player %s", p.Id)
 }

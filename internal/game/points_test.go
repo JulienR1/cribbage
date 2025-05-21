@@ -52,7 +52,8 @@ func TestFifteen(t *testing.T) {
 }
 
 func TestLastPlayed(t *testing.T) {
-	p1, p2 := game.NewPlayer(), game.NewPlayer()
+	var players game.Players
+	p1, p2 := game.NewPlayer(players), game.NewPlayer(players)
 	someCard, _ := deck.NewCard(deck.ACE, deck.CLUBS)
 
 	tests := []struct {

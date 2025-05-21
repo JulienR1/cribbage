@@ -1,10 +1,9 @@
-const gameId = location.pathname.split("/").reverse()[0] ?? "";
-const ws = new WebSocket("/ws");
-
-ws.addEventListener("open", function () {
-  console.log("connected to ws");
-  ws.send(gameId);
-});
+const params = new URLSearchParams();
+const playerId = localStorage.getItem("player-id");
+if (playerId) {
+  params.append("player-id", playerId);
+}
+const ws = new WebSocket(location.toString() + "/ws?" + params.toString());
 
 ws.addEventListener("close", function () {
   location.assign("/");
@@ -13,6 +12,8 @@ ws.addEventListener("close", function () {
 ws.addEventListener("message", handleMessage);
 
 const handlers = {
+  "game-id": onGameId,
+  "player-id": onPlayerId,
   "player-count": onPlayerCount,
 };
 
@@ -30,6 +31,16 @@ function handleMessage({ data }) {
 /** @param {[string, string]} */
 function unhandler([opcode]) {
   console.error("unhandled opcode:", opcode);
+}
+
+/** @param {[string, string]} */
+function onGameId([_, gameId]) {
+  console.log("game id:", gameId);
+}
+
+/** @param {[string, string]} */
+function onPlayerId([_, playerId]) {
+  localStorage.setItem("player-id", playerId);
 }
 
 /** @param {[string, string]} */
