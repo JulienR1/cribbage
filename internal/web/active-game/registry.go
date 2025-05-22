@@ -2,7 +2,6 @@ package activegame
 
 import (
 	"errors"
-	"fmt"
 	"log"
 	"slices"
 	"sync"
@@ -56,15 +55,15 @@ func (registry *GameRegistry) RegisterConnection(gameId, playerId string, conn *
 	}
 
 	var player *game.Player = nil
-	for _, p := range g.players {
+	for _, p := range g.Players {
 		if p.Id == playerId {
 			player = p
 		}
 	}
 
 	if player == nil {
-		player = game.NewPlayer(g.players)
-		g.players = append(g.players, player)
+		player = game.NewPlayer(g.Players)
+		g.Players = append(g.Players, player)
 	}
 
 	g.cancelationId.Add(1)
@@ -72,9 +71,9 @@ func (registry *GameRegistry) RegisterConnection(gameId, playerId string, conn *
 
 	log.Println("player", player.Id, "connected to game", gameId)
 
-	write(conn, fmt.Sprintf("game-id:%s", gameId))
-	write(conn, fmt.Sprintf("player-id:%s", player.Id))
-	g.OnPlayerCountChange()
+	write(conn, "game-id", gameId)
+	write(conn, "player-id", player.Id)
+	g.OnPlayerChange(player.Id)
 
 	return g, nil
 }
@@ -83,7 +82,7 @@ func (registry *GameRegistry) UnregisterConnection(game *ActiveGame, conn *webso
 	for playerId, connections := range game.sessions {
 		if i := slices.Index(connections, conn); i != -1 {
 			game.sessions[playerId] = slices.Delete(connections, i, i+1)
-			game.OnPlayerCountChange()
+			game.OnPlayerChange(playerId)
 			break
 		}
 	}
@@ -96,15 +95,15 @@ func (registry *GameRegistry) UnregisterConnection(game *ActiveGame, conn *webso
 	if connectionCount == 0 {
 		go func() {
 			cancelationId := game.cancelationId.Load()
-			log.Println("No more connections on game", game.id, ", scheduled to be deleted in 1 minute.")
+			log.Println("No more connections on game", game.Id, ", scheduled to be deleted in 1 minute.")
 
 			time.Sleep(time.Minute)
 
 			if game.cancelationId.Load() == cancelationId {
-				registry.Delete(game.id)
-				log.Println("Game", game.id, "was deleted.")
+				registry.Delete(game.Id)
+				log.Println("Game", game.Id, "was deleted.")
 			} else {
-				log.Println("Game", game.id, "was not deleted as a new connection was detected meanwhile.")
+				log.Println("Game", game.Id, "was not deleted as a new connection was detected meanwhile.")
 			}
 		}()
 	}

@@ -1,7 +1,9 @@
+const store = { gameId: "", playerId: "" };
+
 const params = new URLSearchParams();
-const playerId = localStorage.getItem("player-id");
-if (playerId) {
-  params.append("player-id", playerId);
+store.playerId = localStorage.getItem("player-id");
+if (store.playerId) {
+  params.append("player-id", store.playerId);
 }
 const ws = new WebSocket(location.toString() + "/ws?" + params.toString());
 
@@ -14,8 +16,10 @@ ws.addEventListener("message", handleMessage);
 const handlers = {
   "game-id": onGameId,
   "player-id": onPlayerId,
-  "player-count": onPlayerCount,
+  "player-change": onPlayerChange,
 };
+
+const playerList = document.getElementById("players");
 
 /** @param {{data:string}} */
 function handleMessage({ data }) {
@@ -36,6 +40,7 @@ function unhandler([opcode]) {
 /** @param {[string, string]} */
 function onGameId([_, gameId]) {
   console.log("game id:", gameId);
+  store.gameId = gameId;
 }
 
 /** @param {[string, string]} */
@@ -44,6 +49,28 @@ function onPlayerId([_, playerId]) {
 }
 
 /** @param {[string, string]} */
-function onPlayerCount([_, count]) {
-  console.log("player count changed:", count);
+async function onPlayerChange([_, playerId]) {
+  const element = document.createElement("div");
+  element.innerHTML = await get(`/${store.gameId}/players/${playerId}`);
+
+  playerList.querySelector(`#player-${playerId}`)?.replaceWith(element) ??
+    playerList.appendChild(element);
+}
+
+/**
+ * @param  {number} opcode
+ * @param {number[]} payload
+ **/
+function write(opcode, payload = []) {
+  ws.send(new Uint8Array([opcode, ...payload]));
+}
+
+/**
+ * @param url  {string} url
+ * @returns {Promise<string>}
+ */
+async function get(url) {
+  const headers = { "X-Player-Id": store.playerId };
+  const response = await fetch(url, { headers });
+  return response.text();
 }

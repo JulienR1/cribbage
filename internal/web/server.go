@@ -21,6 +21,24 @@ func Run() {
 	fs := http.FileServer(http.Dir("./public"))
 	http.Handle("GET /public/res/", http.StripPrefix("/public/res/", fs))
 
+	http.HandleFunc("GET /{gameId}/players/{playerId}", func(w http.ResponseWriter, r *http.Request) {
+		game, ok := games.Get(r.PathValue("gameId"))
+		if ok == false {
+			http.Error(w, "invalid game id", http.StatusBadRequest)
+			return
+		}
+
+		playerId := r.PathValue("playerId")
+		for _, player := range game.Players {
+			if player.Id == playerId {
+				templates.Player(player, game.GetPlayerStatus(player.Id)).Render(context.Background(), w)
+				return
+			}
+		}
+
+		http.Error(w, "unknown player", http.StatusBadRequest)
+	})
+
 	http.HandleFunc("GET /{gameId}/ws", func(w http.ResponseWriter, r *http.Request) {
 		gameId := r.PathValue("gameId")
 		if len(gameId) == 0 || games.Contains(gameId) == false {
@@ -54,7 +72,8 @@ func Run() {
 			return
 		}
 
-		templates.Game(gameId).Render(context.Background(), w)
+		game, _ := games.Get(gameId)
+		templates.Game(game).Render(context.Background(), w)
 	})
 
 	http.HandleFunc("POST /", func(w http.ResponseWriter, r *http.Request) {

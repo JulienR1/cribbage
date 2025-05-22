@@ -1,8 +1,15 @@
 package templates
 
-templ Game(gameId string) {
+import "github.com/julienr1/cribbage/internal/web/active-game"
+
+templ Game(game *activegame.ActiveGame) {
 	<script src="/public/res/game.js" defer></script>
 	@Layout() {
-		<div>game { gameId }</div>
+		<div>game { game.Id }</div>
+		<ul id="players">
+			for _, player := range game.Players {
+				@Player(player, game.GetPlayerStatus(player.Id))
+			}
+		</ul>
 	}
 }

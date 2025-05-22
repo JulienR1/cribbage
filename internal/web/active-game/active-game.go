@@ -11,9 +11,10 @@ import (
 )
 
 type ActiveGame struct {
-	id      string
-	game    *game.Game
-	players game.Players
+	Id      string
+	Players game.Players
+
+	game *game.Game
 
 	ch            <-chan string
 	cancelationId atomic.Int32
@@ -22,15 +23,24 @@ type ActiveGame struct {
 
 func New(id string) *ActiveGame {
 	sessions := make(map[string][]*websocket.Conn)
-	return &ActiveGame{id: id, sessions: sessions}
+	return &ActiveGame{Id: id, sessions: sessions}
 }
 
-func (game *ActiveGame) OnPlayerCountChange() {
+func (game *ActiveGame) OnPlayerChange(playerId string) {
 	for _, player := range game.sessions {
 		for _, connection := range player {
-			write(connection, fmt.Sprintf("player-count:%d", len(game.players)))
+			write(connection, "player-change", playerId)
 		}
 	}
+}
+
+func (g *ActiveGame) GetPlayerStatus(playerId string) PlayerStatus {
+	if connections, ok := g.sessions[playerId]; ok == false {
+		return Unknown
+	} else if len(connections) == 0 {
+		return Disconnected
+	}
+	return Connected
 }
 
 func (g *ActiveGame) Handle(conn *websocket.Conn) {
@@ -41,18 +51,26 @@ func (g *ActiveGame) Handle(conn *websocket.Conn) {
 			return
 		}
 
-		switch messageType {
-		case websocket.BinaryMessage:
-			fmt.Println("ws:", message)
-		case websocket.TextMessage:
-			fmt.Println("ws:", string(message))
+		if messageType == websocket.TextMessage {
+			log.Println("Received text payload from websocket:", message)
+			continue
+		}
+
+		assert.Assert(len(message) > 0, "websocket message was empty")
+		opcode := message[0]
+		data := message[1:]
+
+		log.Println("ws:", opcode, data)
+
+		switch opcode {
+		case 0:
 		}
 	}
 }
 
-func write(conn *websocket.Conn, message string) {
+func write(conn *websocket.Conn, title, message string) {
 	w, err := conn.NextWriter(websocket.TextMessage)
 	assert.AssertE(err)
 	defer w.Close()
-	fmt.Fprint(w, message)
+	fmt.Fprint(w, fmt.Sprintf("%s:%s", title, message))
 }
