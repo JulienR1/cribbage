@@ -12,6 +12,17 @@ import (
 	"github.com/julienr1/cribbage/internal/web/templates"
 )
 
+func cookie(id string) http.Cookie {
+	return http.Cookie{
+		Name:     "playerId",
+		Value:    id,
+		Path:     "/",
+		Secure:   true,
+		HttpOnly: true,
+		SameSite: http.SameSiteStrictMode,
+	}
+}
+
 func Run() {
 	games := activegame.NewRegistry()
 	games.Set("8uGAs", activegame.New("8uGAs"))
@@ -27,6 +38,9 @@ func Run() {
 			http.Error(w, "invalid game id", http.StatusBadRequest)
 			return
 		}
+
+		c, _ := r.Cookie("playerId")
+		fmt.Println("cookie:", c.Value)
 
 		playerId := r.PathValue("playerId")
 		for _, player := range game.Players {
@@ -72,8 +86,13 @@ func Run() {
 			return
 		}
 
+		ctx := context.WithValue(context.Background(), "player-id", r.Header.Get("X-player-id"))
+
+		c := cookie(utils.Id(6))
+		http.SetCookie(w, &c)
+
 		game, _ := games.Get(gameId)
-		templates.Game(game).Render(context.Background(), w)
+		templates.Game(game).Render(ctx, w)
 	})
 
 	http.HandleFunc("POST /", func(w http.ResponseWriter, r *http.Request) {

@@ -6,6 +6,7 @@ templ Game(game *activegame.ActiveGame) {
 	<script src="/public/res/game.js" defer></script>
 	@Layout() {
 		<div>game { game.Id }</div>
+		<div>logged in player: { CurrentPlayerId(ctx) }</div>
 		<ul id="players">
 			for _, player := range game.Players {
 				@Player(player, game.GetPlayerStatus(player.Id))
