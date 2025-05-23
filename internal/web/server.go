@@ -2,120 +2,118 @@ package web
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log"
 	"net/http"
 
 	"github.com/gorilla/websocket"
+	"github.com/julienr1/cribbage/internal/assert"
 	"github.com/julienr1/cribbage/internal/utils"
 	activegame "github.com/julienr1/cribbage/internal/web/active-game"
+	"github.com/julienr1/cribbage/internal/web/middleware"
 	"github.com/julienr1/cribbage/internal/web/templates"
 )
 
-func cookie(id string) http.Cookie {
-	return http.Cookie{
-		Name:     "playerId",
-		Value:    id,
-		Path:     "/",
-		Secure:   true,
-		HttpOnly: true,
-		SameSite: http.SameSiteStrictMode,
-	}
-}
+var games = activegame.NewRegistry()
+var upgrader = websocket.Upgrader{}
 
 func Run() {
-	games := activegame.NewRegistry()
-	games.Set("8uGAs", activegame.New("8uGAs"))
-
-	var upgrader = websocket.Upgrader{}
-
 	fs := http.FileServer(http.Dir("./public"))
 	http.Handle("GET /public/res/", http.StripPrefix("/public/res/", fs))
 
-	http.HandleFunc("GET /{gameId}/players/{playerId}", func(w http.ResponseWriter, r *http.Request) {
-		game, ok := games.Get(r.PathValue("gameId"))
-		if ok == false {
-			http.Error(w, "invalid game id", http.StatusBadRequest)
-			return
-		}
+	middleware.New(logger, validateGame, authenticate, selectedPlayer).
+		HandleFunc("GET /{gameId}/players/{playerId}", func(w http.ResponseWriter, r *http.Request) {
+			playerId := templates.PlayerId(r.Context())
+			game, _ := games.Get(templates.GameId(r.Context()))
 
-		c, _ := r.Cookie("playerId")
-		fmt.Println("cookie:", c.Value)
+			for _, player := range game.Players {
+				if player.Id == playerId {
+					templates.Player(player, game.GetPlayerStatus(player.Id)).Render(context.Background(), w)
+					return
+				}
+			}
 
-		playerId := r.PathValue("playerId")
-		for _, player := range game.Players {
-			if player.Id == playerId {
-				templates.Player(player, game.GetPlayerStatus(player.Id)).Render(context.Background(), w)
+			http.Error(w, "unknown player", http.StatusBadRequest)
+		})
+
+	middleware.New(logger, validateGame, authenticate).
+		HandleFunc("GET /{gameId}/ws", func(w http.ResponseWriter, r *http.Request) {
+			conn, err := upgrader.Upgrade(w, r, nil)
+			if err != nil {
+				http.Error(w, err.Error(), http.StatusInternalServerError)
+				log.Println(err.Error())
 				return
 			}
-		}
+			defer conn.Close()
 
-		http.Error(w, "unknown player", http.StatusBadRequest)
-	})
+			gameId := templates.GameId(r.Context())
+			userId := templates.CurrentUserId(r.Context())
 
-	http.HandleFunc("GET /{gameId}/ws", func(w http.ResponseWriter, r *http.Request) {
-		gameId := r.PathValue("gameId")
-		if len(gameId) == 0 || games.Contains(gameId) == false {
-			http.Error(w, "invalid game id", http.StatusBadRequest)
-			return
-		}
+			game, err := games.RegisterConnection(gameId, userId, conn)
+			if err != nil {
+				log.Println(err)
+				return
+			}
 
-		conn, err := upgrader.Upgrade(w, r, nil)
-		if err != nil {
-			log.Println(err)
-			return
-		}
+			defer games.UnregisterConnection(game, conn)
+			game.Handle(conn)
+		})
 
-		defer conn.Close()
-		playerId := r.URL.Query().Get("player-id")
-		game, err := games.RegisterConnection(gameId, playerId, conn)
-		if err != nil {
-			log.Println(err)
-			return
-		}
+	middleware.New(logger, validateGame).
+		HandleFunc("GET /{gameId}", func(w http.ResponseWriter, r *http.Request) {
+			gameId := templates.GameId(r.Context())
+			game, _ := games.Get(gameId)
 
-		defer games.UnregisterConnection(game, conn)
-		game.Handle(conn)
-	})
+			var playerId = ""
+			if c, err := r.Cookie(gameId); errors.Is(err, http.ErrNoCookie) == false {
+				playerId = c.Value
+			} else {
+				playerId, err = utils.UniqueId(8, game.Players)
+				assert.AssertE(err)
+			}
 
-	http.HandleFunc("GET /{gameId}", func(w http.ResponseWriter, r *http.Request) {
-		gameId := r.PathValue("gameId")
+			game.WithPlayer(playerId)
 
-		if len(gameId) == 0 || games.Contains(gameId) == false {
-			http.Redirect(w, r, "/", http.StatusFound)
-			return
-		}
+			cookie := http.Cookie{
+				Name:     gameId,
+				Value:    playerId,
+				Path:     fmt.Sprintf("/%s", gameId),
+				Secure:   true,
+				HttpOnly: true,
+				MaxAge:   3600, // 1 hour
+				SameSite: http.SameSiteStrictMode,
+			}
+			http.SetCookie(w, &cookie)
 
-		ctx := context.WithValue(context.Background(), "player-id", r.Header.Get("X-player-id"))
+			w.Header().Set("Cache-Control", "no-store")
+			ctx := context.WithValue(r.Context(), templates.USER_ID, playerId)
+			templates.Game(game).Render(ctx, w)
+		})
 
-		c := cookie(utils.Id(6))
-		http.SetCookie(w, &c)
+	middleware.New(logger).
+		HandleFunc("POST /", func(w http.ResponseWriter, r *http.Request) {
+			id, err := utils.UniqueId(5, games)
+			if err != nil {
+				w.WriteHeader(http.StatusInternalServerError)
+				fmt.Fprint(w, err)
+				return
+			}
 
-		game, _ := games.Get(gameId)
-		templates.Game(game).Render(ctx, w)
-	})
+			games.Set(id, activegame.New(id))
+			http.Redirect(w, r, fmt.Sprintf("/%s", id), http.StatusFound)
+		})
 
-	http.HandleFunc("POST /", func(w http.ResponseWriter, r *http.Request) {
-		id, err := utils.UniqueId(5, games)
-		if err != nil {
-			w.WriteHeader(http.StatusInternalServerError)
-			fmt.Fprint(w, err)
-			return
-		}
+	middleware.New(logger).
+		HandleFunc("GET /", func(w http.ResponseWriter, r *http.Request) {
+			gameId := r.FormValue("game-id")
+			if len(gameId) > 0 {
+				http.Redirect(w, r, fmt.Sprintf("/%s", gameId), http.StatusFound)
+				return
+			}
 
-		games.Set(id, activegame.New(id))
-		http.Redirect(w, r, fmt.Sprintf("/%s", id), http.StatusFound)
-	})
-
-	http.HandleFunc("GET /", func(w http.ResponseWriter, r *http.Request) {
-		gameId := r.FormValue("game-id")
-		if len(gameId) > 0 {
-			http.Redirect(w, r, fmt.Sprintf("/%s", gameId), http.StatusFound)
-			return
-		}
-
-		templates.Index().Render(context.Background(), w)
-	})
+			templates.Index().Render(r.Context(), w)
+		})
 
 	log.Println("Listening on http://localhost:8888")
 	log.Fatal(http.ListenAndServe(":8888", nil))

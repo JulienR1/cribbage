@@ -30,8 +30,8 @@ func main() {
 	}
 
 	var players game.Players
-	for range playerCount {
-		player := game.NewPlayer(players)
+	for i := range playerCount {
+		player := game.NewPlayer(fmt.Sprintf("player-%d", i))
 		players = append(players, player)
 	}
 

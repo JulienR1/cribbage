@@ -8,7 +8,6 @@ import (
 
 	"github.com/julienr1/cribbage/internal/assert"
 	"github.com/julienr1/cribbage/internal/deck"
-	"github.com/julienr1/cribbage/internal/utils"
 )
 
 type Player struct {
@@ -35,10 +34,7 @@ func (players Players) Contains(id string) bool {
 	return false
 }
 
-func NewPlayer(usedIds utils.Container[string]) *Player {
-	id, err := utils.UniqueId(8, usedIds)
-	assert.AssertE(err)
-
+func NewPlayer(id string) *Player {
 	ch := make(chan []uint8)
 	handlers := make(map[uint8](func(data []uint8) []uint8))
 	return &Player{Id: id, ch: ch, handlers: handlers}

@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/gorilla/websocket"
+	"github.com/julienr1/cribbage/internal/assert"
 	"github.com/julienr1/cribbage/internal/game"
 )
 
@@ -50,21 +51,11 @@ func (registry *GameRegistry) Delete(gameId string) {
 
 func (registry *GameRegistry) RegisterConnection(gameId, playerId string, conn *websocket.Conn) (*ActiveGame, error) {
 	g, ok := registry.Get(gameId)
-	if ok == false {
-		return nil, UnknownGameErr
-	}
+	assert.Assert(ok, UnknownGameErr)
 
-	var player *game.Player = nil
-	for _, p := range g.Players {
-		if p.Id == playerId {
-			player = p
-		}
-	}
-
-	if player == nil {
-		player = game.NewPlayer(g.Players)
-		g.Players = append(g.Players, player)
-	}
+	index := slices.IndexFunc(g.Players, func(p *game.Player) bool { return p.Id == playerId })
+	assert.Assert(index >= 0, "expected player to be created in game before being accessed")
+	player := g.Players[index]
 
 	g.cancelationId.Add(1)
 	g.sessions[player.Id] = append(g.sessions[player.Id], conn)

@@ -1,11 +1,6 @@
 const store = { gameId: "", playerId: "" };
 
-const params = new URLSearchParams();
-store.playerId = localStorage.getItem("player-id");
-if (store.playerId) {
-  params.append("player-id", store.playerId);
-}
-const ws = new WebSocket(location.toString() + "/ws?" + params.toString());
+const ws = new WebSocket(location.toString() + "/ws");
 
 ws.addEventListener("close", function () {
   location.assign("/");
@@ -45,13 +40,13 @@ function onGameId([_, gameId]) {
 
 /** @param {[string, string]} */
 function onPlayerId([_, playerId]) {
-  localStorage.setItem("player-id", playerId);
+  store.playerId = playerId;
 }
 
 /** @param {[string, string]} */
 async function onPlayerChange([_, playerId]) {
   const element = document.createElement("div");
-  element.innerHTML = await get(`/${store.gameId}/players/${playerId}`);
+  element.innerHTML = await html(`/${store.gameId}/players/${playerId}`);
 
   playerList.querySelector(`#player-${playerId}`)?.replaceWith(element) ??
     playerList.appendChild(element);
@@ -69,8 +64,7 @@ function write(opcode, payload = []) {
  * @param url  {string} url
  * @returns {Promise<string>}
  */
-async function get(url) {
-  const headers = { "X-Player-Id": store.playerId };
+async function html(url) {
   const response = await fetch(url, { headers });
   return response.text();
 }

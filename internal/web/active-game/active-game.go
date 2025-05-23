@@ -26,6 +26,17 @@ func New(id string) *ActiveGame {
 	return &ActiveGame{Id: id, sessions: sessions}
 }
 
+func (g *ActiveGame) WithPlayer(playerId string) {
+	for _, p := range g.Players {
+		if p.Id == playerId {
+			return
+		}
+	}
+
+	player := game.NewPlayer(playerId)
+	g.Players = append(g.Players, player)
+}
+
 func (game *ActiveGame) OnPlayerChange(playerId string) {
 	for _, player := range game.sessions {
 		for _, connection := range player {
