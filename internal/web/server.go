@@ -22,6 +22,16 @@ func Run() {
 	fs := http.FileServer(http.Dir("./public"))
 	http.Handle("GET /public/res/", http.StripPrefix("/public/res/", fs))
 
+	middleware.New(logger, validateGame, authenticate, selectedPlayer, form).
+		HandleFunc("POST /{gameId}/players/{playerId}/name", func(w http.ResponseWriter, r *http.Request) {
+			playerId := templates.PlayerId(r.Context())
+			g, _ := games.Get(templates.GameId(r.Context()))
+
+			// NOTE: This should be sanitized but I will rely on templ because this project is for fun only.
+			name := r.Form.Get("player-name")
+			g.UpdatePlayerName(playerId, name)
+		})
+
 	middleware.New(logger, validateGame, authenticate, selectedPlayer).
 		HandleFunc("GET /{gameId}/players/{playerId}", func(w http.ResponseWriter, r *http.Request) {
 			playerId := templates.PlayerId(r.Context())

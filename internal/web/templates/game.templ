@@ -1,5 +1,6 @@
 package templates
 
+import "fmt"
 import "github.com/julienr1/cribbage/internal/web/active-game"
 
 templ Game(game *activegame.ActiveGame) {
@@ -12,5 +13,9 @@ templ Game(game *activegame.ActiveGame) {
 				@Player(player, game.GetPlayerStatus(player.Id))
 			}
 		</ul>
+		<form hx-post={ templ.URL(fmt.Sprintf("/%s/players/%s/name", GameId(ctx), CurrentUserId(ctx))) } hx-swap="none">
+			<label for="player-name">Name:</label>
+			<input id="player-name" name="player-name" type="text"/>
+		</form>
 	}
 }

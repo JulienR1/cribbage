@@ -61,3 +61,11 @@ func selectedPlayer(w http.ResponseWriter, r *http.Request, next func(*http.Requ
 	ctx := context.WithValue(r.Context(), templates.PLAYER_ID, playerId)
 	next(r.WithContext(ctx))
 }
+
+func form(w http.ResponseWriter, r *http.Request, next func(*http.Request)) {
+	if err := r.ParseForm(); err != nil {
+		http.Error(w, "could not process form values", http.StatusBadRequest)
+		return
+	}
+	next(r)
+}

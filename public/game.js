@@ -65,6 +65,6 @@ function write(opcode, payload = []) {
  * @returns {Promise<string>}
  */
 async function html(url) {
-  const response = await fetch(url, { headers });
+  const response = await fetch(url);
   return response.text();
 }

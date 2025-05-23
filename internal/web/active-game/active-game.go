@@ -3,6 +3,7 @@ package activegame
 import (
 	"fmt"
 	"log"
+	"slices"
 	"sync/atomic"
 
 	"github.com/gorilla/websocket"
@@ -52,6 +53,13 @@ func (g *ActiveGame) GetPlayerStatus(playerId string) PlayerStatus {
 		return Disconnected
 	}
 	return Connected
+}
+
+func (g *ActiveGame) UpdatePlayerName(playerId, name string) {
+	index := slices.IndexFunc(g.Players, func(p *game.Player) bool { return p.Id == playerId })
+	assert.Assert(index >= 0, "expected player to be in game")
+	g.Players[index].Name = name
+	g.OnPlayerChange(playerId)
 }
 
 func (g *ActiveGame) Handle(conn *websocket.Conn) {
